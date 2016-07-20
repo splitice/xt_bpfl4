@@ -1,0 +1,77 @@
+# Edit Makefile.in and run ./configure
+
+KVERSION = @KVERSION@
+KDIR = @KDIR@
+KINSTDIR = $(shell dirname @KDIR@)
+KOPTS = @KOPTS@
+IPTABLES_CFLAGS = @IPTABLES_CFLAGS@
+IPTABLES_MODULES = @IPTABLES_MODULES@
+DEPMOD = /sbin/depmod -a $(KVERSION)
+CARGS = @CARGS@
+CC = gcc
+
+# https://www.kernel.org/doc/Documentation/kbuild/modules.txt
+# https://www.kernel.org/doc/Documentation/kbuild/makefiles.txt
+obj-m = match/xt_bpfl4.o
+ccflags-y = @KOPTS@
+
+all: match/xt_bpfl4.ko libxt_bpfl4.so
+
+match/xt_bpfl4.ko: match/xt_bpfl4.c Makefile
+	@echo Compiling for kernel $(KVERSION)
+	make -C $(KDIR) M=$(CURDIR) modules CONFIG_DEBUG_INFO=y
+	@touch $@
+	
+sparse: | match/xt_bpfl4.c Makefile
+	@rm -f match/xt_bpfl4.ko match/xt_bpfl4.o
+	@echo Compiling for kernel $(KVERSION)
+	make -C $(KDIR) M=$(CURDIR) modules C=1
+	@touch match/xt_bpfl4.ko
+minstall: | match/xt_bpfl4.ko
+	@echo " *"
+	make -C $(KDIR) M=$(CURDIR) modules_install INSTALL_MOD_PATH=$(DESTDIR)
+	mv /lib/modules/$(KVERSION)/extra/match/* /lib/modules/$(KVERSION)/extra
+	rm /lib/modules/$(KVERSION)/extra/match -R
+	$(DEPMOD)
+mclean:
+	make -C $(KDIR) M=$(CURDIR) clean
+lclean:
+	-rm -f *.so *_sh.o
+clean: mclean lclean
+	-rm -f *.so *.o modules.order
+
+libxt_bpfl4_sh.o: match/libxt_bpfl4.c
+	gcc -O2 -Wall -Wunused $(IPTABLES_CFLAGS) -fPIC -o $@ -c match/libxt_bpfl4.c
+
+%.so: %_sh.o
+	gcc -shared -o $@ $<
+
+linstall: | libxt_bpfl4.so
+	@echo " *"
+	install -D libxt_bpfl4.so $(DESTDIR)$(IPTABLES_MODULES)/libxt_bpfl4.so
+
+dinstall:
+	@echo " *"
+	@./install-dkms.sh --install
+
+install: minstall linstall
+
+uninstall:
+	-rm -f $(DESTDIR)$(IPTABLES_MODULES)/libxt_bpfl4.so
+	@if [ "@DKMSINSTALL@" = dinstall ]; then ./install-dkms.sh --uninstall; fi
+	-rm -f $(DESTDIR)$(KINSTDIR)/extra/xt_bpfl4.ko
+
+Makefile: Makefile.in configure
+	./configure --make ${CARGS}
+
+load: all
+	-insmod match/xt_bpfl4.ko
+
+unload:
+	-rmmod match/xt_bpfl4.ko
+
+reload: unload load
+
+ChangeLog:
+	gitlog-to-changelog > ChangeLog
+.PHONY: ChangeLog
