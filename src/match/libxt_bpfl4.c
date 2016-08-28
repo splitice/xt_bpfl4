@@ -111,7 +111,7 @@ static void bpf_save(const void *ip, const struct xt_entry_match *match)
 {
 	const struct xt_bpf_info *info = (void *) match->data;
 
-	printf(" --bytecode \"%hu,", info->bpf_program_num_elem);
+	printf(" --bytecodel4 \"%hu,", info->bpf_program_num_elem);
 	bpf_print_code(ip, match);
 	printf("\"");
 }
