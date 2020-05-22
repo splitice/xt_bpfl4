@@ -36,16 +36,15 @@ static int bpfl4_mt_check(const struct xt_mtchk_param *par)
 	return 0;
 }
 
-static bool bpfl4_mt(const struct sk_buff *skb, struct xt_action_param *par)
+static bool bpfl4_mt(struct sk_buff *skb, struct xt_action_param *par)
 {
 	bool result;
-	struct sk_buff *skb2;
 	const struct xt_bpf_info *info = par->matchinfo;
 
-	skb2 = skb_clone (skb, GFP_ATOMIC);
-	skb2->data += par->thoff;
-	result = BPF_PROG_RUN(info->filter, skb2);
-	kfree_skb(skb2);
+	char* oldData = skb->data;
+	skb->data += par->thoff;
+	result = BPF_PROG_RUN(info->filter, skb);
+	skb->data = oldData;
 	
 	return result;
 }
