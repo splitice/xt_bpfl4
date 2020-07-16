@@ -12,22 +12,28 @@ CC = gcc
 
 # https://www.kernel.org/doc/Documentation/kbuild/modules.txt
 # https://www.kernel.org/doc/Documentation/kbuild/makefiles.txt
-obj-m = match/xt_bpfl4.o
+obj-m = match/xt_bpfl4.o match/xt_cbpf.o
 ccflags-y = @KOPTS@
 
-all: match/xt_bpfl4.ko libxt_bpfl4.so
+all: match/xt_bpfl4.ko libxt_bpfl4.so match/xt_cbpf.ko libxt_cbpf.so
 
 match/xt_bpfl4.ko: match/xt_bpfl4.c Makefile
 	@echo Compiling for kernel $(KVERSION)
 	make -C $(KDIR) M=$(CURDIR) modules CONFIG_DEBUG_INFO=y
 	@touch $@
+
 	
-sparse: | match/xt_bpfl4.c Makefile
-	@rm -f match/xt_bpfl4.ko match/xt_bpfl4.o
+match/xt_cbpf.ko: match/xt_cbpf.c Makefile
+	@echo Compiling for kernel $(KVERSION)
+	make -C $(KDIR) M=$(CURDIR) modules CONFIG_DEBUG_INFO=y
+	@touch $@
+	
+sparse: | match/xt_bpfl4.c match/xt_cbpf.c Makefile
+	@rm -f match/xt_bpfl4.ko match/xt_bpfl4.o xt_cbpf.ko match/xt_cbpf.o
 	@echo Compiling for kernel $(KVERSION)
 	make -C $(KDIR) M=$(CURDIR) modules C=1
 	@touch match/xt_bpfl4.ko
-minstall: | match/xt_bpfl4.ko
+minstall: | match/xt_bpfl4.ko match/xt_cbpf.ko
 	@echo " *"
 	make -C $(KDIR) M=$(CURDIR) modules_install INSTALL_MOD_PATH=$(DESTDIR)
 	mv /lib/modules/$(KVERSION)/extra/match/* /lib/modules/$(KVERSION)/extra
@@ -43,12 +49,16 @@ clean: mclean lclean
 libxt_bpfl4_sh.o: match/libxt_bpfl4.c
 	gcc -O2 -Wall -Wunused $(IPTABLES_CFLAGS) -fPIC -o $@ -c match/libxt_bpfl4.c
 
+libxt_cbpf_sh.o: match/libxt_cbpf.c
+	gcc -O2 -Wall -Wunused $(IPTABLES_CFLAGS) -fPIC -o $@ -c match/libxt_cbpf.c
+
 %.so: %_sh.o
 	gcc -shared -o $@ $<
 
-linstall: | libxt_bpfl4.so
+linstall: | libxt_bpfl4.so libxt_cbpf.so
 	@echo " *"
 	install -D libxt_bpfl4.so $(DESTDIR)$(IPTABLES_MODULES)/libxt_bpfl4.so
+	install -D libxt_cbpf.so $(DESTDIR)$(IPTABLES_MODULES)/libxt_cbpf.so
 
 dinstall:
 	@echo " *"
@@ -58,17 +68,21 @@ install: minstall linstall
 
 uninstall:
 	-rm -f $(DESTDIR)$(IPTABLES_MODULES)/libxt_bpfl4.so
+	-rm -f $(DESTDIR)$(IPTABLES_MODULES)/libxt_cbpf.so
 	@if [ "@DKMSINSTALL@" = dinstall ]; then ./install-dkms.sh --uninstall; fi
 	-rm -f $(DESTDIR)$(KINSTDIR)/extra/xt_bpfl4.ko
+	-rm -f $(DESTDIR)$(KINSTDIR)/extra/xt_cbpf.ko
 
 Makefile: Makefile.in configure
 	./configure --make ${CARGS}
 
 load: all
 	-insmod match/xt_bpfl4.ko
+	-insmod match/xt_cbpf.ko
 
 unload:
 	-rmmod match/xt_bpfl4.ko
+	-rmmod match/xt_cbpf.ko
 
 reload: unload load
 
