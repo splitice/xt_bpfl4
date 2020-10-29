@@ -53,7 +53,7 @@ libxt_cbpf_sh.o: match/libxt_cbpf.c
 	gcc -O2 -Wall -Wunused $(IPTABLES_CFLAGS) -fPIC -o $@ -c match/libxt_cbpf.c
 
 %.so: %_sh.o
-	gcc -shared -o $@ $<
+	gcc -shared -lxtables -o $@ $<
 
 linstall: | libxt_bpfl4.so libxt_cbpf.so
 	@echo " *"
