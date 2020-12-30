@@ -73,7 +73,7 @@ static void bpf_parse_string(struct xt_option_call *cb, const char *bpf_program,
 
 	if (i != bi->bpf_program_num_elem)
 		xtables_error(PARAMETER_PROBLEM,
-			      "bpflv: parsed program length is less than the"
+			      "bpfl4: parsed program length is less than the"
 			      " encoded length parameter");
 }
 
