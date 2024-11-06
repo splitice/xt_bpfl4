@@ -7,12 +7,18 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/skbuff.h>
 #include <linux/filter.h>
 
 #include "xt_cbpf.h"
 #include <linux/netfilter/x_tables.h>
+
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
+#define bpf_prog_run BPF_PROG_RUN
+#endif
 
 MODULE_AUTHOR("Mathew Heard <mheard@x4b.net>");
 MODULE_DESCRIPTION("Xtables: BPF Layer4 filter match");
@@ -41,7 +47,7 @@ static bool cbpf_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	bool result;
 	const struct xt_cbpf_info *info = par->matchinfo;
 	
-	result = BPF_PROG_RUN(info->filter, skb);
+	result = bpf_prog_run(info->filter, skb);
 	
 	return result;
 }
