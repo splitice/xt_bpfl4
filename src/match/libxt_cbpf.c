@@ -142,6 +142,9 @@ static struct xtables_match bpf_match = {
 	.x6_options	= bpf_opts,
 };
 
+#ifndef _init
+#define _init __attribute__((constructor)) _INIT
+#endif
 void _init(void)
 {
 	xtables_register_match(&bpf_match);
